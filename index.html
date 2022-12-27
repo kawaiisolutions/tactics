@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<body>
+
+<pre id="log"></pre>
+
+<script type="module">
+import { load, Prolog } from 'https://esm.sh/trealla';
+await load();
+
+let pl = new Prolog();
+
+async function init() {
+	const script = await (await fetch("./tactics.pl")).text();
+	await pl.consultText(script);
+}
+
+async function test() {
+	const result = await pl.queryOnce(`test.`);
+	console.log(result);
+	document.getElementById("log").innerText = result.stdout;
+}
+
+await init();
+await test();
+</script>
+</body>
+</html>
