@@ -43,6 +43,8 @@ let pl = new Prolog();
 let state = null;
 let focus = null;
 let turns = 0;
+let moveRadius = [];
+let attackRadius = [];
 
 async function init() {
 	const script = await (await fetch("./tactics.pl")).text();
@@ -56,13 +58,14 @@ async function init() {
 }
 
 async function test() {
-	const r = await pl.queryOnce(`begin(42, State, Cues).`);
+	const r = await pl.queryOnce(`begin(42, State, Cues), current_unit(State, Unit), move_radius(State, Unit, MoveRadius), attack_radius(Unit, AttackRadius), menu(State, Menu).`);
 	console.log(r);
 	handle(r);
 }
 
 async function apply(goal) {
-	const result = await pl.queryOnce(`do(Goal, State0, State, Cues).`, {bind: {Goal: goal, State0: state}});
+	const result = await pl.queryOnce(`do(Goal, State0, State, Cues), current_unit(State, Unit), move_radius(State, Unit, MoveRadius), attack_radius(Unit, AttackRadius), menu(State, Menu).`,
+		{bind: {Goal: goal, State0: state}});
 	console.log(result);
 	log(result.stdout);
 	if (result.result === "failure") {
@@ -80,10 +83,14 @@ function handle(result) {
 		console.log(result.stderr);
 	}
 	if (result.result == "error") {
-		log(`You can't do that. ${goal}`);
+		log(`You can't do that. ${result.error}`);
 		return;
 	}
 	state = result.answer.State;
+	if (result.answer.AttackRadius)
+		attackRadius = result.answer.AttackRadius.map(x => `${x.args[0]}/${x.args[1]}`);
+	if (result.answer.MoveRadius)
+		moveRadius = result.answer.MoveRadius.map(x => `${x.args[0]}/${x.args[1]}`);
 	const cues = result.answer.Cues;
 	for (const cue of cues) {
 		switch (cue.functor) {
@@ -111,11 +118,18 @@ function render() {
 
 	for (let y = 1; y <= 8; y++) {
 		for (let x = 1; x <= 8; x++) {
-			const id = `map-${x}/${y}`;
+			const pos = `${x}/${y}`;
+			const id = `map-${pos}`;
 			const elem = document.getElementById(id);
 			elem.textContent = "#";
 			elem.style.color = "black";
-			elem.style.backgroundColor = "initial";
+			if (attackRadius.includes(pos)) {
+				elem.style.backgroundColor = "rgba(250, 0, 0, 0.2)";
+			} else if (moveRadius.includes(pos)) {
+				elem.style.backgroundColor = "rgba(0, 0, 250, 0.2)";
+			} else {
+				elem.style.backgroundColor = "initial";
+			}
 		}
 	}
 
@@ -130,9 +144,11 @@ function render() {
 		const health = unit.args[4];
 		const hp = health.args[0];
 		const maxhp = health.args[1];
-		const mana = unit.args[4];
+		const mana = unit.args[5];
 		const mp = mana.args[0];
 		const maxmp = mana.args[1];
+		const speed = unit.args[6];
+		const status = unit.args[7];
 		const id = `map-${pos.args[0]}/${pos.args[1]}`;
 		const elem = document.getElementById(id);
 		if (!elem) {
@@ -141,7 +157,7 @@ function render() {
 		elem.textContent = "@";
 		elem.style.color = color;
 		if (uid == focus) {
-			elem.style.backgroundColor = "rgba(250, 0, 0, 0.2)";
+			elem.style.backgroundColor = "rgba(0, 250, 0, 0.2)";
 		}
 		const attack = new Compound("attack", [uid]);
 		elem.onclick = apply.bind(elem, attack);
@@ -159,7 +175,7 @@ function render() {
 function log(msg) {
 	if (msg == "") return;
 	const elem = document.getElementById("log");
-	elem.innerText = `${msg}\n${elem.innerText}`;
+	elem.innerText = `${msg.trim()}\n\n\u2042\n\n${elem.innerText}`;
 }
 
 await init();

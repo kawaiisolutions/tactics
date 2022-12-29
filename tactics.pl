@@ -67,7 +67,7 @@ effect(begin_turn, CT-Unit0, CT-Unit, [focus_unit(ID)]) :-
 
 effect(move(To), CT0-Unit0, CT-Unit, [move_unit(ID, To)]) :-
 	pos(To),
-	can_move(Unit0, To),
+	can_move([], Unit0, To), % TODO
 	unit_with_pos(To, Unit0, Unit1),
 	unit_with_status(+moved, Unit1, Unit),
 	unit_id(Unit, ID),
@@ -152,24 +152,53 @@ sort_state(State0, State) :-
 	keysort(State0, State1),
 	reverse(State1, State).
 
-can_move(Unit, To) :-
+distance(X0/Y0, X1/Y1, Dist) :-
+	Dist is abs(X0-X1) + abs(Y0-Y1).
+
+can_move(State, Unit, To) :-
+	pos(To),
 	\+unit_has_status(moved, Unit),
+	\+unit_at(State, To, _),
 	unit_pos(Unit, From),
 	move_range(Unit, Range),
 	distance(From, To, Dist),
 	Dist =< Range.
 
-move_range(Unit, Range) :-
+unit_at(State, Pos, Unit) :-
+	freeze(Unit, unit_pos(Unit, Pos)),
+	memberchk(_-Unit, State).
+
+move_radius(State, Unit, Positions) :-
+	findall(Pos, can_move(State, Unit, Pos), Positions).
+
+attack_range(Unit, Range) :-
 	unit_type(Unit, Type),
-	unit_type_move_range(Type, Range).
+	unit_type_attack_range(Type, Range).
+
+can_attack(Unit, Pos) :-
+	\+unit_has_status(attacked, Unit),
+	unit_pos(Unit, P),
+	% exclude self?
+	dif(Pos, P),
+	pos(Pos),
+	attack_range(Unit, Range),
+	distance(P, Pos, Distance),
+	Distance =< Range.
+
+attack_radius(Unit, Positions) :-
+	findall(Pos, can_attack(Unit, Pos), Positions).
 
 % can_attack(A, B)
 
-distance(X0/Y0, X1/Y1, Dist) :-
-	Dist is abs(X0-X1) + abs(Y0-Y1).
-
 unit_type_move_range(soldier, 4).
 unit_type_move_range(guy, 3).
+
+unit_type_attack_range(soldier, 1).
+unit_type_attack_range(guy, 1).
+
+move_range(Unit, Range) :-
+	unit_type(Unit, Type),
+	unit_type_move_range(Type, Range).
 
 test :-
 	srandom(42),
