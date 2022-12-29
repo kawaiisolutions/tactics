@@ -28,11 +28,20 @@ unit_with_status(-X,
 unit_with_hp(+X,
 	unit(ID, Team, Type, Pos, HP0/MaxHP, Mana, Speed, Status),
 	unit(ID, Team, Type, Pos, HP/MaxHP, Mana, Speed, Status)) :-
-	HP is max(HP0 + X, MaxHP).
+	HP is min(HP0 + X, MaxHP).
 unit_with_hp(-X,
 	unit(ID, Team, Type, Pos, HP0/MaxHP, Mana, Speed, Status),
 	unit(ID, Team, Type, Pos, HP/MaxHP, Mana, Speed, Status)) :-
 	HP is max(HP0 - X, 0).
+unit_with_mp(+X,
+	unit(ID, Team, Type, Pos, Health, MP0/MaxMP, Speed, Status),
+	unit(ID, Team, Type, Pos, Health, MP/MaxMP, Speed, Status)) :-
+	MP is min(MP0 + X, MaxMP).
+unit_with_mp(-X,
+	unit(ID, Team, Type, Pos, Health, MP0/MaxMP, Speed, Status),
+	unit(ID, Team, Type, Pos, Health, MP/MaxMP, Speed, Status)) :-
+	MP is max(MP0 - X, 0).
+
 
 unit_has_status(X, Unit) :-
 	unit_status(Unit, Status),
@@ -51,7 +60,9 @@ effect(tick, CT0-Unit, CT-Unit, []) :-
 
 effect(begin_turn, CT-Unit0, CT-Unit, [focus_unit(ID)]) :-
 	unit_with_status(-wait, Unit0, Unit1),
-	unit_with_status(-moved, Unit1, Unit),
+	unit_with_status(-attacked, Unit1, Unit2),
+	unit_with_status(-moved, Unit2, Unit3),
+	unit_with_mp(+1, Unit3, Unit),
 	unit_id(Unit, ID).
 
 effect(move(To), CT0-Unit0, CT-Unit, [move_unit(ID, To)]) :-
@@ -79,13 +90,14 @@ can_do(move, State) :-
 	\+unit_has_status(moved, Unit),
 	move_range(Unit, Range),
 	Range > 0.
-can_do(end_turn, State) :-
-	current_unit(State, Unit),
-	\+unit_has_status(wait, Unit).
 can_do(attack, State) :-
 	current_unit(State, Unit),
 	\+unit_has_status(wait, Unit),
 	\+unit_has_status(attacked, Unit).
+can_do(end_turn, State) :-
+	current_unit(State, Unit),
+	\+unit_has_status(wait, Unit).
+
 menu(State, Actions) :-
 	findall(Action, can_do(Action, State), Actions).
 
@@ -111,26 +123,30 @@ end_turn([Unit0|State0], [Unit|State0], Cues) :-
 	effect(end_turn, Unit0, Unit, Cues).
 
 move(To, [Unit0|State], [Unit|State], Cues) :-
+	freeze(Blocker, unit_pos(Blocker, To)),
+	\+memberchk(_-Blocker, State),
 	effect(move(To), Unit0, Unit, Cues).
 
-attack(Target, State0, [CT-Unit|State], [attack(ID, Target), damage(Target, Damage)]) :-
-	[CT0-Unit0|S0] = State0,
+attack(Target, [CT0-Unit0|State0], [CT-Unit|State], [attack(ID, Target), damage(Target, Damage)]) :-
 	\+unit_has_status(wait, Unit0),
 	\+unit_has_status(attacked, Unit0),
 	unit_id(Unit, ID),
-	freeze(Victim, unit_id(Victim, Target)),
-	once(select(VCT-Victim0, S0, S1)),
+	select_unit(Target, VCT-Victim0, State0, State1),
 	Damage is 4, % test
 	ct_cost(attack, Cost),
 	CT is CT0 - Cost,
 	unit_with_status(+attacked, Unit0, Unit),
 	unit_with_hp(-Damage, Victim0, Victim),
-	sort_state([VCT-Victim|S1], State).
+	sort_state([VCT-Victim|State1], State).
 
 current_turn(State, Team) :-
 	current_unit(State, Unit),
 	unit_team(Unit, Team).
 current_unit([_-Unit|_], Unit).
+
+select_unit(ID, CT-Unit, State0, State) :-
+	freeze(Unit, unit_id(Unit, ID)),
+	once(select(CT-Unit, State0, State)).
 
 sort_state(State0, State) :-
 	keysort(State0, State1),
@@ -156,16 +172,31 @@ unit_type_move_range(soldier, 4).
 unit_type_move_range(guy, 3).
 
 test :-
+	srandom(42),
 	Unit1 = unit(1, red, soldier, 1/1, 10/10, 5/5, 15, []),
 	Unit2 = unit(2, blue, guy, 5/5, 10/10, 0/5, 25, []),
 	State = [0-Unit1, 0-Unit2],
-	run([next_turn, move(4/5), end_turn, next_turn, end_turn, next_turn, attack(1)], State, _),
+	run([next_turn, move(4/5), end_turn,
+		next_turn, end_turn,
+		next_turn, attack(1), move(3/4), end_turn,
+		next_turn, move(2/2), end_turn,
+		next_turn], State, _, Cues),
+	write(Cues),
 	!.
 
-run(Goals, State0, State) :-
-	foldl(call(do), Goals, State0, State).
+begin(Seed, State, Cues) :-
+	srandom(Seed),
+	Unit1 = unit(1, red, soldier, 1/1, 10/10, 5/5, 13, []),
+	Unit2 = unit(2, blue, guy, 5/5, 10/10, 0/5, 15, []),
+	State0 = [0-Unit1, 0-Unit2],
+	do(next_turn, State0, State, Cues).
 
-do(Goal, State0, State1) :-
+run([], State, State, []).
+run([G|Goals], State0, State, [Cues|Cs]) :-
+	call(do, G, State0, State1, Cues),
+	run(Goals, State1, State, Cs).
+
+do(Goal, State0, State1, Cues) :-
 	format("Action: ~w~n", [Goal]),
 	call(Goal, State0, State1, Cues),
 	dump_state(State1),
