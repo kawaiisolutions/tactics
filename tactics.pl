@@ -208,17 +208,24 @@ can_attack(Unit, Pos) :-
 attack_radius(Unit, Positions) :-
 	findall(Pos, can_attack(Unit, Pos), Positions).
 
-%% aoe(+Shape, +Center, -Pos).
+%% aoe(+Shape, +Origin, -Pos).
 % constrain Pos to area of effect shapes
-aoe(circle(Range), Center, Pos) :-
+aoe(point, Pos, Pos) :-
+	pos(Pos).
+aoe(circle(Range), Origin, Pos) :-
+	pos(Origin),
 	pos(Pos),
-	distance(Center, Pos, Dist),
+	distance(Origin, Pos, Dist),
 	Dist =< Range.
-aoe(cross(Range), CX/CY, X/Y) :-
-	( CX = X ; CY = Y ),
+aoe(cross(Range), OriginX/OriginY, X/Y) :-
+	pos(OriginX/OriginY),
+	( OriginX = X ; OriginY = Y ),
 	pos(X/Y),
-	distance(CX/CY, X/Y, Dist),
+	distance(OriginX/OriginY, X/Y, Dist),
 	Dist =< Range.
+
+aoe_area(AOE, Origin, Positions) :-
+	findall(Pos, aoe(AOE, Origin, Pos), Positions).
 
 unit_type_move_range(soldier, 4).
 unit_type_move_range(guy, 3).

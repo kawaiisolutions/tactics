@@ -2,38 +2,85 @@
 <html>
 <!-- This is just a rough demo client. -->
 <head>
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<title>Tactics: Prolog!</title>
 	<style>
+		header {
+			border-bottom: 1px solid gray;
+		}
 		#map {
 			font-family: monospace;
 			font-size: large;
 			table-layout: fixed;
+			width: min(50vw, 16ch);
 		}
 		#map td {
 			width: 1.5ch;
 			height: 1.5ch;
 			text-align: center;
 		}
+
+		#game[data-view=move] .tile.can-move {
+			background-color: rgba(0, 0, 250, 0.2);
+		}
+		#game[data-view=attack] .tile.can-attack {
+			background-color: rgba(250, 0, 0, 0.2);
+		}
+		#game .tile.focus {
+			background-color: rgba(0, 250, 0, 0.2);
+		}
+
+		#game .tile.unit.team-red {
+			color: red;
+		}
+		#game .tile.unit.team-blue {
+			color: blue;
+		}
+		#game .tile.unit.team-purple {
+			color: rebeccapurple;
+		}
+
 		.tile {
 			cursor: pointer;
 		}
 		#game {
 			display: flex;
 		}
-		#menu[data-status=win] #reset-btn {
+		#menu {
+			padding: 1em;
+		}
+		#menu button {
+			width: 15ch;
+		}
+
+		#menu[data-status=win] .meta {
 			display: initial;
 		}
-		#menu[data-status=win] #pass-btn {
-			pointer-events: none;
-			text-decoration: line-through;
-		}
+
 		#menu:not([data-status=win]) #reset-btn {
 			display: none;
+		}
+
+		#menu[data-status=win] .gameplay,
+		#menu:not([data-can~=attack]) #attack-btn,
+		#menu:not([data-can~=move]) #move-btn,
+		#menu:not([data-can~=end_turn]) #end-turn-btn {
+			pointer-events: none;
+			filter: opacity(50%);
+		}
+
+		@media (hover: none) {
+			#menu button u {
+				text-decoration: none;
+			}
 		}
 	</style>
 </head>
 <body>
-<main id="game">
+<header>
+	turn: <span id="turn-count">0</span> (<span id="match-status">loading...</span>)
+</header>
+<main id="game" data-view="">
 	<table id="map">
 		<tr><td class="tile" id="map-1/1" data-x="1" data-y="1">#</td><td class="tile" id="map-2/1" data-x="2" data-y="1">#</td><td class="tile" id="map-3/1" data-x="3" data-y="1">#</td><td class="tile" id="map-4/1" data-x="4" data-y="1">#</td><td class="tile" id="map-5/1" data-x="5" data-y="1">#</td><td class="tile" id="map-6/1" data-x="6" data-y="1">#</td><td class="tile" id="map-7/1" data-x="7" data-y="1">#</td><td class="tile" id="map-8/1" data-x="8" data-y="1">#</td></tr>
 		<tr><td class="tile" id="map-1/2" data-x="1" data-y="2">#</td><td class="tile" id="map-2/2" data-x="2" data-y="2">#</td><td class="tile" id="map-3/2" data-x="3" data-y="2">#</td><td class="tile" id="map-4/2" data-x="4" data-y="2">#</td><td class="tile" id="map-5/2" data-x="5" data-y="2">#</td><td class="tile" id="map-6/2" data-x="6" data-y="2">#</td><td class="tile" id="map-7/2" data-x="7" data-y="2">#</td><td class="tile" id="map-8/2" data-x="8" data-y="2">#</td></tr>
@@ -47,13 +94,17 @@
 	<ol id="units"></ol>
 </main>
 
-<div id="menu">
-	<p>turn: <span id="turn-count">0</span></p>
-	<p id="match-status"></p>
-	<p>
-		<button id="pass-btn">end turn</button>
+<div id="menu" data-status="loading" data-can="">
+	<p class="gameplay">
+		<button id="move-btn"><u>m</u>ove</button>
 	</p>
-	<p>
+	<p class="gameplay">
+		<button id="attack-btn"><u>a</u>ttack</button>
+	</p>
+	<p class="gameplay">
+		<button id="end-turn-btn">end <u>t</u>urn</button>
+	</p>
+	<p class="meta">
 		<button id="reset-btn">reset</button>
 	</p>
 </div>
@@ -64,27 +115,70 @@
 import { load, Prolog, Atom, Compound } from 'https://esm.sh/trealla';
 await load();
 
-let pl = new Prolog();
+let pl = null;
 let state = null;
 let focus = null;
 let turns = 0;
 let moveRadius = [];
 let attackRadius = [];
 let matchStatus = null;
+let menu = [];
 
-async function init() {
-	const script = await (await fetch("./tactics.pl")).text();
-	await pl.consultText(script);
+const keybinds = {
+	"m": view.bind(globalThis, "move"),
+	"a": view.bind(globalThis, "attack"),
+	"t": endTurn,
+	"Escape": view.bind(globalThis, null),
+}
 
-	const endTurn = document.getElementById("pass-btn");
-	endTurn.onclick = async function() {
-		await apply(new Atom("end_turn"));
-		await apply(new Atom("next_turn"));
-	}
+function setup() {
+	document.getElementById("end-turn-btn").onclick = endTurn
 
 	document.getElementById("reset-btn").onclick = async function() {
 		await init();
 	}
+	document.getElementById("move-btn").onclick = view.bind(globalThis, "move");
+	document.getElementById("attack-btn").onclick = view.bind(globalThis, "attack");
+
+	document.addEventListener("keyup", (event) => {
+		console.log(event);
+		if (event.isComposing || event.keyCode === 229) {
+			return;
+		}
+		const bind = keybinds[event.key];
+		if (!bind) return;
+		bind();
+	});
+}
+
+async function endTurn() {
+	await apply(new Atom("end_turn"));
+	await apply(new Atom("next_turn"));
+	delete document.getElementById("game").dataset.view;
+}
+
+function view(what) {
+	console.log("view", what);
+	const game = document.getElementById("game");
+	if (what) {
+		game.dataset.view = what;
+	} else  {
+		delete game.dataset.view;
+	}
+}
+
+async function init() {
+	pl = new Prolog();
+	state = null;
+	focus = null;
+	turns = 0;
+	moveRadius = [];
+	attackRadius = [];
+	matchStatus = null;
+	menu = [];
+
+	const script = await (await fetch("./tactics.pl")).text();
+	await pl.consultText(script);
 
 	const r = await pl.queryOnce(`begin(42, State, Cues), current_unit(State, Unit), move_radius(State, Unit, MoveRadius), attack_radius(Unit, AttackRadius), menu(State, Menu), match_status(State, MatchStatus).`);
 	console.log(r);
@@ -95,11 +189,11 @@ async function apply(goal) {
 	const result = await pl.queryOnce(`do(Goal, State0, State, Cues), current_unit(State, Unit), move_radius(State, Unit, MoveRadius), attack_radius(Unit, AttackRadius), menu(State, Menu), match_status(State, MatchStatus).`,
 		{bind: {Goal: goal, State0: state}});
 	console.log(result);
-	log(result.stdout);
 	if (result.result === "failure") {
 		log(`You can't do that.`);
 		return;
 	}
+	log(result.stdout);
 	if (result.result !== "success") {
 		throw new Error(`${result.result} ${result.error}`);
 	}
@@ -114,6 +208,7 @@ function handle(result) {
 		log(`You can't do that. ${result.error}`);
 		return;
 	}
+
 	state = result.answer.State;
 	if (result.answer.AttackRadius)
 		attackRadius = result.answer.AttackRadius.map(x => `${x.args[0]}/${x.args[1]}`);
@@ -121,6 +216,9 @@ function handle(result) {
 		moveRadius = result.answer.MoveRadius.map(x => `${x.args[0]}/${x.args[1]}`);
 	if (result.answer.MatchStatus)
 		matchStatus = result.answer.MatchStatus;
+	if (result.answer.Menu)
+		menu = result.answer.Menu.map(x => x.functor);
+
 	const cues = result.answer.Cues;
 	for (const cue of cues) {
 		switch (cue.functor) {
@@ -138,6 +236,7 @@ function handle(result) {
 
 function render() {
 	document.getElementById("turn-count").textContent = turns;
+	document.getElementById("menu").dataset.can = menu.join(" ");
 
 	if (matchStatus) {
 		const ms = document.getElementById("match-status");
@@ -153,6 +252,7 @@ function render() {
 	}
 	
 
+
 	for (const tile of Array.from(document.querySelectorAll(".tile"))) {
 		const x = Number(tile.dataset.x);
 		const y = Number(tile.dataset.y);
@@ -166,16 +266,13 @@ function render() {
 			const id = `map-${pos}`;
 			const elem = document.getElementById(id);
 			elem.textContent = "#";
-			elem.style.color = "black";
-			if (attackRadius.includes(pos)) {
-				elem.style.backgroundColor = "rgba(250, 0, 0, 0.2)";
-			} else if (moveRadius.includes(pos)) {
-				elem.style.backgroundColor = "rgba(0, 0, 250, 0.2)";
-			} else {
-				elem.style.backgroundColor = "initial";
-			}
+			elem.classList.toggle("can-attack", attackRadius.includes(pos))
+			elem.classList.toggle("can-move", moveRadius.includes(pos))
 		}
 	}
+
+	Array.from(document.querySelectorAll(".focus")).forEach(x => x.classList.remove("focus"));
+	Array.from(document.querySelectorAll(".unit")).forEach(x => x.classList.remove("unit"));
 
 	const frag = new DocumentFragment();
 	for (const ct_unit of state) {
@@ -203,16 +300,18 @@ function render() {
 			glyph = "%";
 		}
 		elem.textContent = glyph;
-		elem.style.color = color;
+		elem.classList.add(`team-${color}`);
+		elem.classList.add("unit");
 		if (uid == focus) {
-			elem.style.backgroundColor = "rgba(0, 250, 0, 0.2)";
+			elem.classList.add("focus");
 		}
 		const attack = new Compound("attack", [uid]);
 		elem.onclick = apply.bind(elem, attack);
 
 		const li = document.createElement("li");
 		li.textContent = `${color} ${kind} (HP: ${hp}/${maxhp}, MP: ${mp}/${maxmp}) [CT: ${ct}]`;
-		li.style.textDecoration = `underline ${color}`;
+		li.style.textDecoration = "underline";
+		li.style.textDecorationColor = color;
 		frag.appendChild(li);
 	}
 	const units = document.getElementById("units");
@@ -226,6 +325,7 @@ function log(msg) {
 	elem.innerText = `${msg.trim()}\n\n\u2042\n\n${elem.innerText}`;
 }
 
+setup();
 await init();
 </script>
 </body>
