@@ -198,22 +198,35 @@ can_attack(Unit, Pos) :-
 	\+unit_has_status(dead, Unit),
 	\+unit_has_status(acted, Unit),
 	\+unit_has_status(wait, Unit),
-	unit_pos(Unit, UnitPos),
+	unit_pos(Unit, X/Y),
 	% exclude self?
-	dif(Pos, UnitPos),
-	pos(Pos),
+	dif(Pos, X/Y),
+	% test: cross-shaped attack pattern
 	attack_range(Unit, Range),
-	distance(UnitPos, Pos, Distance),
-	Distance =< Range.
+	aoe(Range, X/Y, Pos).
 
 attack_radius(Unit, Positions) :-
 	findall(Pos, can_attack(Unit, Pos), Positions).
 
+%% aoe(+Shape, +Center, -Pos).
+% constrain Pos to area of effect shapes
+aoe(circle(Range), Center, Pos) :-
+	pos(Pos),
+	distance(Center, Pos, Dist),
+	Dist =< Range.
+aoe(cross(Range), CX/CY, X/Y) :-
+	( CX = X ; CY = Y ),
+	pos(X/Y),
+	distance(CX/CY, X/Y, Dist),
+	Dist =< Range.
+
 unit_type_move_range(soldier, 4).
 unit_type_move_range(guy, 3).
+unit_type_move_range(wizard, 2).
 
-unit_type_attack_range(soldier, 1).
-unit_type_attack_range(guy, 1).
+unit_type_attack_range(soldier, cross(1)).
+unit_type_attack_range(guy, cross(2)).
+unit_type_attack_range(wizard, circle(5)).
 
 move_range(Unit, Range) :-
 	unit_type(Unit, Type),
