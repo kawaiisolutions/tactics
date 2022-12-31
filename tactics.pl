@@ -1,4 +1,4 @@
-% :- module(tactics, [test/0]).
+% unit(ID, Team, Type, Pos, Health, Mana, Speed, Status).
 
 unit_id(unit(ID, _, _, _, _, _, _, _), ID).
 unit_team(unit(_, Team, _, _, _, _, _, _), Team).
@@ -42,7 +42,6 @@ unit_with_mp(-X,
 	unit(ID, Team, Type, Pos, Health, MP/MaxMP, Speed, Status)) :-
 	MP is max(MP0 - X, 0).
 
-
 unit_has_status(X, Unit) :-
 	unit_status(Unit, Status),
 	memberchk(X, Status).
@@ -60,14 +59,14 @@ effect(tick, CT0-Unit, CT-Unit, []) :-
 
 effect(begin_turn, CT-Unit0, CT-Unit, [focus_unit(ID)]) :-
 	unit_with_status(-wait, Unit0, Unit1),
-	unit_with_status(-attacked, Unit1, Unit2),
+	unit_with_status(-acted, Unit1, Unit2),
 	unit_with_status(-moved, Unit2, Unit3),
 	unit_with_mp(+1, Unit3, Unit),
 	unit_id(Unit, ID).
 
 effect(move(To), CT0-Unit0, CT-Unit, [move_unit(ID, To)]) :-
 	pos(To),
-	can_move([], Unit0, To), % TODO
+	can_move([0-Unit0], Unit0, To), % TODO
 	unit_with_pos(To, Unit0, Unit1),
 	unit_with_status(+moved, Unit1, Unit),
 	unit_id(Unit, ID),
@@ -86,14 +85,10 @@ ct_cost(end_turn, 60).
 
 can_do(move, State) :-
 	current_unit(State, Unit),
-	\+unit_has_status(wait, Unit),
-	\+unit_has_status(moved, Unit),
-	move_range(Unit, Range),
-	Range > 0.
+	\+ \+can_move(State, Unit, _).
 can_do(attack, State) :-
 	current_unit(State, Unit),
-	\+unit_has_status(wait, Unit),
-	\+unit_has_status(attacked, Unit).
+	\+ \+can_attack(Unit, _).
 can_do(end_turn, State) :-
 	current_unit(State, Unit),
 	\+unit_has_status(wait, Unit).
@@ -101,11 +96,25 @@ can_do(end_turn, State) :-
 menu(State, Actions) :-
 	findall(Action, can_do(Action, State), Actions).
 
-next_turn(State0, [Unit|State], Cues) :-
-	next_turn_(State0, [Unit0|State], Cues0),
+should_pass(State) :-
+	menu(State, [end_turn]).
+
+next_turn(State0, State, Cues) :-
+	next_turn_(State0, State, Cues),
+	\+should_pass(State).
+next_turn(State0, State, Cues) :-
+	next_turn_(State0, State1, Cues1),
+	should_pass(State1),
+	end_turn(State1, State2, Cues2),
+	next_turn(State2, State, Cues3),
+	append(Cues1, Cues2, CuesA),
+	append(CuesA, Cues3, Cues).
+
+next_turn_(State0, [Unit|State], Cues) :-
+	next_turn_tick_(State0, [Unit0|State], Cues0),
 	effect(begin_turn, Unit0, Unit, Cues1),
 	append(Cues0, Cues1, Cues).
-next_turn_(State0, State, Cues) :-
+next_turn_tick_(State0, State, Cues) :-
 	tick(State0, State1, Cues0),
 	[CT-_|_] = State1,
 	(  CT >= 100
@@ -123,21 +132,28 @@ end_turn([Unit0|State0], [Unit|State0], Cues) :-
 	effect(end_turn, Unit0, Unit, Cues).
 
 move(To, [Unit0|State], [Unit|State], Cues) :-
-	freeze(Blocker, unit_pos(Blocker, To)),
-	\+memberchk(_-Blocker, State),
+	\+unit_at(State, To, _),
 	effect(move(To), Unit0, Unit, Cues).
 
 attack(Target, [CT0-Unit0|State0], [CT-Unit|State], [attack(ID, Target), damage(Target, Damage)]) :-
-	\+unit_has_status(wait, Unit0),
-	\+unit_has_status(attacked, Unit0),
 	unit_id(Unit, ID),
 	select_unit(Target, VCT-Victim0, State0, State1),
-	Damage is 4, % test
+	unit_pos(Victim0, TargetPos),
+	can_attack(Unit0, TargetPos),
+	attack_damage(Unit0, Victim0, Damage),
 	ct_cost(attack, Cost),
 	CT is CT0 - Cost,
-	unit_with_status(+attacked, Unit0, Unit),
-	unit_with_hp(-Damage, Victim0, Victim),
+	unit_with_status(+acted, Unit0, Unit),
+	unit_with_hp(-Damage, Victim0, Victim1),
+	unit_hp(Victim1, HP),
+	(  HP =< 0
+	-> unit_with_status(+dead, Victim1, Victim)
+	;  Victim = Victim1	
+	),
 	sort_state([VCT-Victim|State1], State).
+
+attack_damage(_Unit, _Victim, Damage) :-
+	random_between(3, 7, Damage).
 
 current_turn(State, Team) :-
 	current_unit(State, Unit),
@@ -156,11 +172,14 @@ distance(X0/Y0, X1/Y1, Dist) :-
 	Dist is abs(X0-X1) + abs(Y0-Y1).
 
 can_move(State, Unit, To) :-
-	pos(To),
+	\+unit_has_status(dead, Unit),
+	\+unit_has_status(wait, Unit),
 	\+unit_has_status(moved, Unit),
-	\+unit_at(State, To, _),
 	unit_pos(Unit, From),
 	move_range(Unit, Range),
+	Range > 0,
+	pos(To),
+	\+unit_at(State, To, _),
 	distance(From, To, Dist),
 	Dist =< Range.
 
@@ -176,19 +195,19 @@ attack_range(Unit, Range) :-
 	unit_type_attack_range(Type, Range).
 
 can_attack(Unit, Pos) :-
-	\+unit_has_status(attacked, Unit),
-	unit_pos(Unit, P),
+	\+unit_has_status(dead, Unit),
+	\+unit_has_status(acted, Unit),
+	\+unit_has_status(wait, Unit),
+	unit_pos(Unit, UnitPos),
 	% exclude self?
-	dif(Pos, P),
+	dif(Pos, UnitPos),
 	pos(Pos),
 	attack_range(Unit, Range),
-	distance(P, Pos, Distance),
+	distance(UnitPos, Pos, Distance),
 	Distance =< Range.
 
 attack_radius(Unit, Positions) :-
 	findall(Pos, can_attack(Unit, Pos), Positions).
-
-% can_attack(A, B)
 
 unit_type_move_range(soldier, 4).
 unit_type_move_range(guy, 3).
@@ -200,12 +219,19 @@ move_range(Unit, Range) :-
 	unit_type(Unit, Type),
 	unit_type_move_range(Type, Range).
 
+match_status(State, win(Team)) :-
+	findall(T, (member(_-U, State), unit_team(U, T), \+unit_has_status(dead, U)), Teams0),
+	sort(Teams0, [Team]),
+	!.
+match_status(State, input(Team)) :-
+	current_unit(State, Unit),
+	unit_team(Unit, Team),
+	!.
+match_status(_, draw).
+
 test :-
-	srandom(42),
-	Unit1 = unit(1, red, soldier, 1/1, 10/10, 5/5, 15, []),
-	Unit2 = unit(2, blue, guy, 5/5, 10/10, 0/5, 25, []),
-	State = [0-Unit1, 0-Unit2],
-	run([next_turn, move(4/5), end_turn,
+	begin(42, State, _),
+	run([move(4/5), end_turn,
 		next_turn, end_turn,
 		next_turn, attack(1), move(3/4), end_turn,
 		next_turn, move(2/2), end_turn,

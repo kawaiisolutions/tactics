@@ -1,17 +1,38 @@
 <!doctype html>
 <html>
-<body>
+<!-- This is just a rough demo client. -->
 <head>
+	<title>Tactics: Prolog!</title>
 	<style>
 		#map {
 			font-family: monospace;
 			font-size: large;
+			table-layout: fixed;
+		}
+		#map td {
+			width: 1.5ch;
+			height: 1.5ch;
+			text-align: center;
 		}
 		.tile {
 			cursor: pointer;
 		}
+		#game {
+			display: flex;
+		}
+		#menu[data-status=win] #reset-btn {
+			display: initial;
+		}
+		#menu[data-status=win] #pass-btn {
+			pointer-events: none;
+			text-decoration: line-through;
+		}
+		#menu:not([data-status=win]) #reset-btn {
+			display: none;
+		}
 	</style>
 </head>
+<body>
 <main id="game">
 	<table id="map">
 		<tr><td class="tile" id="map-1/1" data-x="1" data-y="1">#</td><td class="tile" id="map-2/1" data-x="2" data-y="1">#</td><td class="tile" id="map-3/1" data-x="3" data-y="1">#</td><td class="tile" id="map-4/1" data-x="4" data-y="1">#</td><td class="tile" id="map-5/1" data-x="5" data-y="1">#</td><td class="tile" id="map-6/1" data-x="6" data-y="1">#</td><td class="tile" id="map-7/1" data-x="7" data-y="1">#</td><td class="tile" id="map-8/1" data-x="8" data-y="1">#</td></tr>
@@ -23,14 +44,18 @@
 		<tr><td class="tile" id="map-1/7" data-x="1" data-y="7">#</td><td class="tile" id="map-2/7" data-x="2" data-y="7">#</td><td class="tile" id="map-3/7" data-x="3" data-y="7">#</td><td class="tile" id="map-4/7" data-x="4" data-y="7">#</td><td class="tile" id="map-5/7" data-x="5" data-y="7">#</td><td class="tile" id="map-6/7" data-x="6" data-y="7">#</td><td class="tile" id="map-7/7" data-x="7" data-y="7">#</td><td class="tile" id="map-8/7" data-x="8" data-y="7">#</td></tr>
 		<tr><td class="tile" id="map-1/8" data-x="1" data-y="8">#</td><td class="tile" id="map-2/8" data-x="2" data-y="8">#</td><td class="tile" id="map-3/8" data-x="3" data-y="8">#</td><td class="tile" id="map-4/8" data-x="4" data-y="8">#</td><td class="tile" id="map-5/8" data-x="5" data-y="8">#</td><td class="tile" id="map-6/8" data-x="6" data-y="8">#</td><td class="tile" id="map-7/8" data-x="7" data-y="8">#</td><td class="tile" id="map-8/8" data-x="8" data-y="8">#</td></tr>
 	</table>
-	<ol id="units">
-
-	</ol>
+	<ol id="units"></ol>
 </main>
 
-<div>
+<div id="menu">
 	<p>turn: <span id="turn-count">0</span></p>
-	<button id="end-turn">end turn</button>
+	<p id="match-status"></p>
+	<p>
+		<button id="pass-btn">end turn</button>
+	</p>
+	<p>
+		<button id="reset-btn">reset</button>
+	</p>
 </div>
 
 <pre id="log"></pre>
@@ -45,26 +70,29 @@ let focus = null;
 let turns = 0;
 let moveRadius = [];
 let attackRadius = [];
+let matchStatus = null;
 
 async function init() {
 	const script = await (await fetch("./tactics.pl")).text();
 	await pl.consultText(script);
 
-	const endTurn = document.getElementById("end-turn");
+	const endTurn = document.getElementById("pass-btn");
 	endTurn.onclick = async function() {
 		await apply(new Atom("end_turn"));
 		await apply(new Atom("next_turn"));
 	}
-}
 
-async function test() {
-	const r = await pl.queryOnce(`begin(42, State, Cues), current_unit(State, Unit), move_radius(State, Unit, MoveRadius), attack_radius(Unit, AttackRadius), menu(State, Menu).`);
+	document.getElementById("reset-btn").onclick = async function() {
+		await init();
+	}
+
+	const r = await pl.queryOnce(`begin(42, State, Cues), current_unit(State, Unit), move_radius(State, Unit, MoveRadius), attack_radius(Unit, AttackRadius), menu(State, Menu), match_status(State, MatchStatus).`);
 	console.log(r);
 	handle(r);
 }
 
 async function apply(goal) {
-	const result = await pl.queryOnce(`do(Goal, State0, State, Cues), current_unit(State, Unit), move_radius(State, Unit, MoveRadius), attack_radius(Unit, AttackRadius), menu(State, Menu).`,
+	const result = await pl.queryOnce(`do(Goal, State0, State, Cues), current_unit(State, Unit), move_radius(State, Unit, MoveRadius), attack_radius(Unit, AttackRadius), menu(State, Menu), match_status(State, MatchStatus).`,
 		{bind: {Goal: goal, State0: state}});
 	console.log(result);
 	log(result.stdout);
@@ -82,7 +110,7 @@ function handle(result) {
 	if (result.stderr != "") {
 		console.log(result.stderr);
 	}
-	if (result.result == "error") {
+	if (result.result == "error" || result.result == "failure") {
 		log(`You can't do that. ${result.error}`);
 		return;
 	}
@@ -91,6 +119,8 @@ function handle(result) {
 		attackRadius = result.answer.AttackRadius.map(x => `${x.args[0]}/${x.args[1]}`);
 	if (result.answer.MoveRadius)
 		moveRadius = result.answer.MoveRadius.map(x => `${x.args[0]}/${x.args[1]}`);
+	if (result.answer.MatchStatus)
+		matchStatus = result.answer.MatchStatus;
 	const cues = result.answer.Cues;
 	for (const cue of cues) {
 		switch (cue.functor) {
@@ -108,6 +138,20 @@ function handle(result) {
 
 function render() {
 	document.getElementById("turn-count").textContent = turns;
+
+	if (matchStatus) {
+		const ms = document.getElementById("match-status");
+		document.getElementById("menu").dataset.status = matchStatus.functor;
+		switch (matchStatus.functor) {
+		case "input":
+			ms.textContent = `${matchStatus.args[0].functor}'s turn`;
+			break;
+		case "win":
+			ms.textContent = `${matchStatus.args[0].functor} wins!`;
+			break;
+		}
+	}
+	
 
 	for (const tile of Array.from(document.querySelectorAll(".tile"))) {
 		const x = Number(tile.dataset.x);
@@ -154,7 +198,11 @@ function render() {
 		if (!elem) {
 			continue;
 		}
-		elem.textContent = "@";
+		let glyph = "@";
+		if (hp === 0) {
+			glyph = "%";
+		}
+		elem.textContent = glyph;
 		elem.style.color = color;
 		if (uid == focus) {
 			elem.style.backgroundColor = "rgba(0, 250, 0, 0.2)";
@@ -179,7 +227,6 @@ function log(msg) {
 }
 
 await init();
-await test();
 </script>
 </body>
 </html>

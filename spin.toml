@@ -1,0 +1,12 @@
+spin_version = "1"
+name = "tactics"
+description = "Tactics Game Demo"
+trigger = { type = "http", base = "/" }
+version = "0.0.1"
+
+[[component]]
+source = "spin_static_fs.wasm"
+id = "fileserver"
+files = [{ source = "", destination = "/" }]
+[component.trigger]
+route = "/..."
