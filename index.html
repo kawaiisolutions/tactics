@@ -5,8 +5,18 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<title>Tactics: Prolog!</title>
 	<style>
+		html {
+			box-sizing: border-box;
+		}
 		header {
 			border-bottom: 1px solid gray;
+		}
+		#log {
+			max-width: 98vw;
+			white-space: pre-wrap;
+			word-break: break-word;
+			overflow-y: scroll;
+			max-height: 46vh;
 		}
 		#map {
 			font-family: monospace;
@@ -40,6 +50,32 @@
 			color: rebeccapurple;
 		}
 
+		#game .tile:hover {
+			border: 2px dashed gainsboro;
+			cursor: default;
+		}
+		#game .tile:hover:is(.can-move, .can-attack) {
+			cursor: pointer;
+		}
+		#game .tile.can-move:hover {
+			border: 2px dashed blue;
+		}
+		#game .tile.can-attack.unit:hover {
+			border: 2px dashed red;
+		}
+		#game .tile:not(:hover) {
+			border: 2px solid transparent;
+		}
+	
+		/*
+		#game .tile:not(.unit).can-move {
+			color: black;
+		}
+		#game .tile:not(.unit):not(.can-move) {
+			color: rgb(128, 128, 128);
+		}
+		*/
+
 		.tile {
 			cursor: pointer;
 		}
@@ -56,8 +92,7 @@
 		#menu[data-status=win] .meta {
 			display: initial;
 		}
-
-		#menu:not([data-status=win]) #reset-btn {
+		#menu:not([data-status=win]) .meta {
 			display: none;
 		}
 
@@ -66,7 +101,7 @@
 		#menu:not([data-can~=move]) #move-btn,
 		#menu:not([data-can~=end_turn]) #end-turn-btn {
 			pointer-events: none;
-			filter: opacity(50%);
+			filter: opacity(35%);
 		}
 
 		@media (hover: none) {
@@ -141,7 +176,6 @@ function setup() {
 	document.getElementById("attack-btn").onclick = view.bind(globalThis, "attack");
 
 	document.addEventListener("keyup", (event) => {
-		console.log(event);
 		if (event.isComposing || event.keyCode === 229) {
 			return;
 		}
@@ -162,7 +196,7 @@ function view(what) {
 	const game = document.getElementById("game");
 	if (what) {
 		game.dataset.view = what;
-	} else  {
+	} else {
 		delete game.dataset.view;
 	}
 }
@@ -186,8 +220,10 @@ async function init() {
 }
 
 async function apply(goal) {
+	console.time("apply");
 	const result = await pl.queryOnce(`do(Goal, State0, State, Cues), current_unit(State, Unit), move_radius(State, Unit, MoveRadius), attack_radius(Unit, AttackRadius), menu(State, Menu), match_status(State, MatchStatus).`,
 		{bind: {Goal: goal, State0: state}});
+	console.timeEnd("apply");
 	console.log(result);
 	if (result.result === "failure") {
 		log(`You can't do that.`);

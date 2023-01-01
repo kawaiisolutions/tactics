@@ -107,8 +107,7 @@ next_turn(State0, State, Cues) :-
 	should_pass(State1),
 	end_turn(State1, State2, Cues2),
 	next_turn(State2, State, Cues3),
-	append(Cues1, Cues2, CuesA),
-	append(CuesA, Cues3, Cues).
+	phrase((Cues1, Cues2, Cues3), Cues).
 
 next_turn_(State0, [Unit|State], Cues) :-
 	next_turn_tick_(State0, [Unit0|State], Cues0),
@@ -171,6 +170,37 @@ sort_state(State0, State) :-
 distance(X0/Y0, X1/Y1, Dist) :-
 	Dist is abs(X0-X1) + abs(Y0-Y1).
 
+pos_adjacent(X/Y0, X/Y1) :- plus(Y0, 1, Y1).
+pos_adjacent(X/Y0, X/Y1) :- plus(Y0, -1, Y1).
+pos_adjacent(X0/Y, X1/Y) :- plus(X0, 1, X1).
+pos_adjacent(X0/Y, X1/Y) :- plus(X0, -1, X1).
+
+path(State, Unit, Dest, Path) :-
+	unit_pos(Unit, Origin),
+	move_range(Unit, Range),
+	between(0, Range, Length),
+	length(Path, Length),
+	path_(State, Unit, Origin, Dest, Path),
+	!.
+path_(_, _, Origin, Origin, []).
+path_(State, _, Origin, Dest, [Dest]) :-
+	\+unit_at(State, Dest, _),
+	pos_adjacent(Origin, Dest).
+path_(State, Unit, Origin, Dest, [Pos|Rest]) :-
+	\+pos_adjacent(Origin, Dest),
+	pos_adjacent(Origin, Pos),
+	(  unit_at(State, Pos, Blocker)
+	-> once(unit_can_bypass(Unit, Blocker))
+	;  true
+	),
+	path_(State, Unit, Pos, Dest, Rest).
+
+unit_can_bypass(Unit, Other) :-
+	unit_team(Unit, Team),
+	unit_team(Other, Team).
+unit_can_bypass(_, Other) :-
+	unit_has_status(dead, Other).
+
 can_move(State, Unit, To) :-
 	\+unit_has_status(dead, Unit),
 	\+unit_has_status(wait, Unit),
@@ -181,7 +211,9 @@ can_move(State, Unit, To) :-
 	pos(To),
 	\+unit_at(State, To, _),
 	distance(From, To, Dist),
-	Dist =< Range.
+	Dist =< Range,
+	path(State, Unit, To, _Path).
+	% format("path to ~w: ~w~n", [To, Path]).
 
 unit_at(State, Pos, Unit) :-
 	freeze(Unit, unit_pos(Unit, Pos)),
