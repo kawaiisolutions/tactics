@@ -52,6 +52,7 @@ pos(X/Y) :-
 	between(1, 12, Y).
 
 %% effect(+Effect, +BeforeState, -AfterState, -Cues).
+% TODO: add +State
 
 effect(tick, CT0-Unit, CT-Unit, []) :-
 	unit_speed(Unit, Speed),
@@ -64,9 +65,9 @@ effect(begin_turn, CT-Unit0, CT-Unit, [focus_unit(ID)]) :-
 	unit_with_mp(+1, Unit3, Unit),
 	unit_id(Unit, ID).
 
-effect(move(To), CT0-Unit0, CT-Unit, [move_unit(ID, To)]) :-
+effect(move(To), State, CT0-Unit0, CT-Unit, [move_unit(ID, To)]) :-
 	pos(To),
-	can_move([0-Unit0], Unit0, To), % TODO
+	can_move(State, Unit0, To),
 	unit_with_pos(To, Unit0, Unit1),
 	unit_with_status(+moved, Unit1, Unit),
 	unit_id(Unit, ID),
@@ -132,7 +133,7 @@ end_turn([Unit0|State0], [Unit|State0], Cues) :-
 
 move(To, [Unit0|State], [Unit|State], Cues) :-
 	\+unit_at(State, To, _),
-	effect(move(To), Unit0, Unit, Cues).
+	effect(move(To), [Unit0|State], Unit0, Unit, Cues).
 
 attack(Target, [CT0-Unit0|State0], [CT-Unit|State], [attack(ID, Target), damage(Target, Damage)]) :-
 	unit_id(Unit, ID),
@@ -170,10 +171,10 @@ sort_state(State0, State) :-
 distance(X0/Y0, X1/Y1, Dist) :-
 	Dist is abs(X0-X1) + abs(Y0-Y1).
 
-pos_adjacent(X/Y0, X/Y1) :- plus(Y0, 1, Y1).
-pos_adjacent(X/Y0, X/Y1) :- plus(Y0, -1, Y1).
-pos_adjacent(X0/Y, X1/Y) :- plus(X0, 1, X1).
-pos_adjacent(X0/Y, X1/Y) :- plus(X0, -1, X1).
+pos_adjacent(X/Y0, X/Y1) :- succ(Y0, Y1).
+pos_adjacent(X/Y0, X/Y1) :- succ(Y1, Y0).
+pos_adjacent(X0/Y, X1/Y) :- succ(X0, X1).
+pos_adjacent(X0/Y, X1/Y) :- succ(X1, X0).
 
 path(State, Unit, Dest, Path) :-
 	unit_pos(Unit, Origin),
