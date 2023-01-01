@@ -178,7 +178,10 @@ pos_adjacent(X0/Y, X1/Y) :- plus(X0, -1, X1).
 path(State, Unit, Dest, Path) :-
 	unit_pos(Unit, Origin),
 	move_range(Unit, Range),
-	between(0, Range, Length),
+	pos(Dest),
+	distance(Origin, Dest, Dist),
+	Dist =< Range,
+	between(Dist, Range, Length),
 	length(Path, Length),
 	path_(State, Unit, Origin, Dest, Path),
 	!.
@@ -205,13 +208,8 @@ can_move(State, Unit, To) :-
 	\+unit_has_status(dead, Unit),
 	\+unit_has_status(wait, Unit),
 	\+unit_has_status(moved, Unit),
-	unit_pos(Unit, From),
-	move_range(Unit, Range),
-	Range > 0,
 	pos(To),
 	\+unit_at(State, To, _),
-	distance(From, To, Dist),
-	Dist =< Range,
 	path(State, Unit, To, _Path).
 	% format("path to ~w: ~w~n", [To, Path]).
 
