@@ -150,6 +150,8 @@
 import { load, Prolog, Atom, Compound } from 'https://esm.sh/trealla';
 await load();
 
+const FILES = ["tactics", "unit", "world"];
+
 let pl = null;
 let state = null;
 let focus = null;
@@ -211,12 +213,23 @@ async function init() {
 	matchStatus = null;
 	menu = [];
 
-	const script = await (await fetch("./tactics.pl")).text();
-	await pl.consultText(script);
+	await Promise.all(FILES.map(x => download(x)));
+	const load = await pl.queryOnce(`consult(tactics).`);
+	if (load.result !== "success") {
+		alert("failed to load: " + load.error);
+		return;
+	}
+	console.log(load);
 
 	const r = await pl.queryOnce(`begin(42, State, Cues), current_unit(State, Unit), move_radius(State, Unit, MoveRadius), attack_radius(Unit, AttackRadius), menu(State, Menu), match_status(State, MatchStatus).`);
 	console.log(r);
 	handle(r);
+}
+
+async function download(name) {
+	const filename = `/${name}.pl`
+	const script = await (await fetch("." + filename)).text();
+	pl.fs.open(filename, { write: true, create: true }).writeString(script);
 }
 
 async function apply(goal) {
