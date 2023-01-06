@@ -56,7 +56,7 @@ move_radius(State, Unit, Positions) :-
 	findall(Pos, can_move(State, Unit, Pos), Positions).
 
 unit_at(State, Pos, Unit) :-
-	freeze(Unit, unit_pos(Unit, Pos)),
+	unit_pos(Unit, Pos),
 	memberchk(_-Unit, State).
 
 distance(X0/Y0, X1/Y1, Dist) :-

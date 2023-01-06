@@ -117,7 +117,7 @@ current_turn(State, Team) :-
 current_unit([_-Unit|_], Unit).
 
 select_unit(ID, CT-Unit, State0, State) :-
-	freeze(Unit, unit_id(Unit, ID)),
+	unit_id(Unit, ID),
 	once(select(CT-Unit, State0, State)).
 
 sort_state(State0, State) :-
