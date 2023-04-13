@@ -215,7 +215,7 @@ async function init() {
 
 	await Promise.all(FILES.map(x => download(x)));
 	const load = await pl.queryOnce(`consult(tactics).`);
-	if (load.result !== "success") {
+	if (load.status !== "success") {
 		alert("failed to load: " + load.error);
 		return;
 	}
@@ -238,13 +238,13 @@ async function apply(goal) {
 		{bind: {Goal: goal, State0: state}});
 	console.timeEnd("apply");
 	console.log(result);
-	if (result.result === "failure") {
+	if (result.status === "failure") {
 		log(`You can't do that.`);
 		return;
 	}
 	log(result.stdout);
-	if (result.result !== "success") {
-		throw new Error(`${result.result} ${result.error}`);
+	if (result.status !== "success") {
+		throw new Error(`${result.status} ${result.error}`);
 	}
 	handle(result);
 }
@@ -253,7 +253,7 @@ function handle(result) {
 	if (result.stderr != "") {
 		console.log(result.stderr);
 	}
-	if (result.result == "error" || result.result == "failure") {
+	if (result.status == "error" || result.status == "failure") {
 		log(`You can't do that. ${result.error}`);
 		return;
 	}
