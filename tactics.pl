@@ -1,3 +1,7 @@
+:- use_module(library(lists)).
+:- use_module(library(dcgs)).
+:- use_module(library(format)).
+
 :- use_module(world).
 :- use_module(unit).
 
@@ -108,8 +112,9 @@ move(To, State0, State, Cues) :-
 attack(Target, State0, State, Cues) :-
 	effect(attack(Target), State0, State, Cues).
 
-attack_damage(_Unit, _Victim, Damage) :-
-	random_between(3, 7, Damage).
+attack_damage(Unit, _Victim, Damage) :-
+	unit_weapon(Unit, weapon(_, Min, Max)),
+	random_between(Min, Max, Damage).
 
 current_turn(State, Team) :-
 	current_unit(State, Unit),
@@ -124,15 +129,15 @@ sort_state(State0, State) :-
 	keysort(State0, State1),
 	reverse(State1, State).
 
-match_status(State, win(Team)) :-
+match_status(State, Status) :-
+	once(match_status_(State, Status)).
+match_status_(State, win(Team)) :-
 	findall(T, (member(_-U, State), unit_team(U, T), \+unit_has_status(dead, U)), Teams0),
-	sort(Teams0, [Team]),
-	!.
-match_status(State, input(Team)) :-
+	sort(Teams0, [Team]).
+match_status_(State, input(Team)) :-
 	current_unit(State, Unit),
-	unit_team(Unit, Team),
-	!.
-match_status(_, draw).
+	unit_team(Unit, Team).
+match_status_(_, draw).
 
 test :-
 	begin(42, State, _),
@@ -146,10 +151,10 @@ test :-
 
 begin(Seed, State, Cues) :-
 	srandom(Seed),
-	Unit1 = unit(1, red, soldier, 1/1, 10/10, 5/5, 13, []),
-	Unit2 = unit(2, red, dog, 1/2, 1/1, 0/1, 12, []),
-	Unit3 = unit(3, blue, guy, 5/5, 10/10, 0/5, 15, []),
-	Unit4 = unit(4, blue, cat, 5/4, 1/1, 0/1, 12, []),
+	Unit1 = unit(1, red, soldier, 1/1, 10/10, 5/5, 13, [weapon(sword, 3, 7)], []),
+	Unit2 = unit(2, red, dog, 1/2, 1/1, 0/1, 12, [weapon(bite, 1, 3)], []),
+	Unit3 = unit(3, blue, guy, 5/5, 10/10, 0/5, 15, [weapon(sword, 3, 7)], []),
+	Unit4 = unit(4, blue, cat, 5/4, 1/1, 0/1, 12, [weapon(sword, 1, 3)], []),
 	State0 = [0-Unit1, 0-Unit2, 0-Unit3, 0-Unit4],
 	do(next_turn, State0, State, Cues).
 

@@ -11,6 +11,9 @@
 		header {
 			border-bottom: 1px solid gray;
 		}
+		body {
+			background: white;
+		}
 		#log {
 			max-width: 98vw;
 			white-space: pre-wrap;
@@ -147,7 +150,7 @@
 <pre id="log"></pre>
 
 <script type="module">
-import { load, Prolog, Atom, Compound } from 'https://esm.sh/trealla';
+import { load, Prolog, Atom, Compound } from 'https://esm.sh/trealla@0.18.5?target=es2018';
 await load();
 
 const FILES = ["tactics", "unit", "world"];
@@ -221,7 +224,14 @@ async function init() {
 	}
 	console.log(load);
 
-	const r = await pl.queryOnce(`begin(42, State, Cues), current_unit(State, Unit), move_radius(State, Unit, MoveRadius), attack_radius(Unit, AttackRadius), menu(State, Menu), match_status(State, MatchStatus).`);
+	const r = await pl.queryOnce(`
+		begin(Seed, State, Cues),
+		current_unit(State, Unit),
+		move_radius(State, Unit, MoveRadius),
+		attack_radius(Unit, AttackRadius),
+		menu(State, Menu),
+		match_status(State, MatchStatus).`,
+		{bind: {Seed: Date.now()}});
 	console.log(r);
 	handle(r);
 }
@@ -234,7 +244,13 @@ async function download(name) {
 
 async function apply(goal) {
 	console.time("apply");
-	const result = await pl.queryOnce(`do(Goal, State0, State, Cues), current_unit(State, Unit), move_radius(State, Unit, MoveRadius), attack_radius(Unit, AttackRadius), menu(State, Menu), match_status(State, MatchStatus).`,
+	const result = await pl.queryOnce(`
+		do(Goal, State0, State, Cues),
+		current_unit(State, Unit),
+		move_radius(State, Unit, MoveRadius),
+		attack_radius(Unit, AttackRadius),
+		menu(State, Menu),
+		match_status(State, MatchStatus).`,
 		{bind: {Goal: goal, State0: state}});
 	console.timeEnd("apply");
 	console.log(result);
@@ -371,7 +387,8 @@ function render() {
 function log(msg) {
 	if (msg == "") return;
 	const elem = document.getElementById("log");
-	elem.innerText = `${msg.trim()}\n\n\u2042\n\n${elem.innerText}`;
+	// elem.innerText = `${msg.trim()}\n\n\u2042\n\n${elem.innerText}`;
+	elem.innerText = msg;
 }
 
 setup();

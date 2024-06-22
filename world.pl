@@ -1,6 +1,8 @@
 :- module(world, [pos/1, pos_adjacent/2, path/4, unit_can_bypass/2, can_move/3, move_radius/3,
 	unit_at/3, distance/3, can_attack/2, attack_radius/2, aoe/3, aoe_area/3]).
 
+:- use_module(library(lists)).
+:- use_module(library(dif)).
 :- use_module(unit).
 
 pos(X/Y) :-

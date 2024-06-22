@@ -7,15 +7,14 @@ ifndef SPINCFG
 SPINCFG = spin.toml
 endif
 
-.PHONY: run watch container deploy
+.PHONY: run watch
 
 all: run
 
 build:
-	spin build --file $(SPINCFG)
 
-run: build
+run: # build
 	$(SPINFLAGS) spin up --file $(SPINCFG)
 
-watch: build
-	nodemon --watch cgi-bin --watch . --ext pl,html --verbose --signal SIGINT --exec '$(SPINFLAGS) spin up --file $(SPINCFG)'
+watch: # build
+	$(SPINFLAGS) spin watch --skip-build --direct-mounts --file $(SPINCFG)
