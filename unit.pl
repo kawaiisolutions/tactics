@@ -1,5 +1,6 @@
 :- module(unit, [unit_id/2, unit_team/2, unit_type/2, unit_pos/2, unit_health/2, unit_hp/2, unit_maxhp/2,
 	unit_mana/2, unit_mp/2, unit_maxmp/2, unit_speed/2, unit_status/2,
+	unit_json/2,
 	unit_with_pos/3, unit_with_hp/3, unit_with_mp/3, unit_with_status/3,
 	unit_equipment/2, unit_weapon/2, unit_has_status/3,
 	move_range/2, attack_range/2, tick_unit/2]).
@@ -21,6 +22,30 @@ unit_maxmp(unit(_, _, _, _, _, _/MaxMP, _, _, _), MaxMP).
 unit_speed(unit(_, _, _, _, _, _, Speed, _, _), Speed).
 unit_equipment(unit(_, _, _, _, _, _, _, Equipment, _), Equipment).
 unit_status(unit(_, _, _, _, _, _, _, _, Status), Status).
+
+unit_json(
+	CT-unit(ID, Team0, Type0, X/Y, HP/MaxHP, MP/MaxMP, Speed, Equipment0, Status0),
+	{
+		"id": ID,
+		"team": Team,
+		"ct": CT,
+		"type": Type,
+		"pos": {"x": X, "y": Y},
+		"hp": HP,
+		"maxhp": MaxHP,
+		"mp": MP,
+		"maxmp": MaxMP,
+		"speed": Speed,
+		"equipment": Equipment,
+		"status": Status
+	}
+) :-
+	maplist(atom_chars, [Team0, Type0|Status0], [Team, Type|Status]),
+	equipment_json(Equipment0, Equipment).
+
+equipment_json([], []).
+equipment_json(Equipment, JSON) :- maplist(equipment_json_, Equipment, JSON).
+equipment_json_(weapon(Name0, Min, Max), {"type": "weapon", "name": Name}) :- atom_chars(Name0, Name).
 
 unit_with_pos(To,
 	unit(ID, Team, Type, _Pos, Health, Mana, Speed, Equipment, Status),

@@ -1,5 +1,5 @@
 :- module(world, [pos/1, pos_adjacent/2, path/4, unit_can_bypass/2, can_move/3, move_radius/3,
-	unit_at/3, distance/3, can_attack/2, attack_radius/2, aoe/3, aoe_area/3]).
+	unit_at/3, distance/3, can_attack/2, can_attack_from/3, attack_radius/2, aoe/3, aoe_area/3]).
 
 :- use_module(library(lists)).
 :- use_module(library(dif)).
@@ -65,10 +65,13 @@ distance(X0/Y0, X1/Y1, Dist) :-
 	Dist is abs(X0-X1) + abs(Y0-Y1).
 
 can_attack(Unit, Pos) :-
+	unit_pos(Unit, X/Y),
+	can_attack_from(X/Y, Unit, Pos).
+
+can_attack_from(X/Y, Unit, Pos) :-
 	\+unit_has_status(dead, Unit),
 	\+unit_has_status(acted, Unit),
 	\+unit_has_status(wait, Unit),
-	unit_pos(Unit, X/Y),
 	% exclude self?
 	dif(Pos, X/Y),
 	% test: cross-shaped attack pattern

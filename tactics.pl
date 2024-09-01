@@ -1,6 +1,8 @@
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).
 :- use_module(library(format)).
+:- use_module(library(dif)).
+:- use_module(library(pseudojson)).
 
 :- use_module(world).
 :- use_module(unit).
@@ -69,6 +71,23 @@ can_do(attack, State) :-
 can_do(end_turn, State) :-
 	current_unit(State, Unit),
 	\+unit_has_status(wait, Unit).
+
+enemy_target(State, Target) :-
+	current_unit(State, Unit),
+	can_attack(Unit, Target),
+	dif(Friend, Foe),
+	unit_team(Unit, Friend),
+	unit_team(Target, Foe).
+enemy_target(State, Target) :-
+	current_unit(State, Unit),
+	can_move(State, Unit, Pos),
+	can_attack_from(Pos, Unit, At),
+	unit_at(State, At, Target),
+	% can't reach without moving
+	\+ can_attack(Unit, Target),
+	dif(Friend, Foe),
+	unit_team(Unit, Friend),
+	unit_team(Target, Foe).
 
 possible_actions(State, Actions) :-
 	findall(Action, can_do(Action, State), Actions).
@@ -154,7 +173,7 @@ begin(Seed, State, Cues) :-
 	Unit1 = unit(1, red, soldier, 1/1, 10/10, 5/5, 13, [weapon(sword, 3, 7)], []),
 	Unit2 = unit(2, red, dog, 1/2, 1/1, 0/1, 12, [weapon(bite, 1, 3)], []),
 	Unit3 = unit(3, blue, guy, 5/5, 10/10, 0/5, 15, [weapon(sword, 3, 7)], []),
-	Unit4 = unit(4, blue, cat, 5/4, 1/1, 0/1, 12, [weapon(sword, 1, 3)], []),
+	Unit4 = unit(4, blue, cat, 5/4, 1/1, 0/1, 12, [weapon(scratch, 1, 3)], []),
 	State0 = [0-Unit1, 0-Unit2, 0-Unit3, 0-Unit4],
 	do(next_turn, State0, State, Cues).
 
@@ -175,7 +194,18 @@ do(Action, State0, State1, Cues) :-
 dump_state(State) :-
 	maplist(dump_unit, State),
 	current_turn(State, Who),
-	format("Turn: ~w~n", [Who]).
+	format("Turn: ~w~n", [Who]),
+	(  enemy_target(State, Target)
+	-> format("Potential target: ~w~n", [Target])
+	;  format("No targets? :(~n", [])
+	).
 
 dump_unit(CT-Unit) :-
 	format("CT(~w): ~w~n", [CT, Unit]).
+
+% TODO: enemy ai
+ai_team(red).
+
+state_json_chars(State, Cs) :-
+	maplist(unit_json, State, JS),
+	json_chars(JS, Cs).
