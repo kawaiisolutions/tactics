@@ -54,7 +54,7 @@ effect(attack(Target), [CT0-Unit0|State0], [CT-Unit|State], [attack(ID, Target),
 	unit_hp(Victim1, HP),
 	(  HP =< 0
 	-> unit_with_status(+dead, Victim1, Victim)
-	;  Victim = Victim1	
+	;  Victim = Victim1
 	),
 	sort_state([VCT-Victim|State1], State).
 
@@ -72,13 +72,15 @@ can_do(end_turn, State) :-
 	current_unit(State, Unit),
 	\+unit_has_status(wait, Unit).
 
-enemy_target(State, Target) :-
+enemy_target(State, Target, [attack(TargetID)]) :-
 	current_unit(State, Unit),
 	can_attack(Unit, Target),
 	dif(Friend, Foe),
 	unit_team(Unit, Friend),
-	unit_team(Target, Foe).
-enemy_target(State, Target) :-
+	unit_team(Target, Foe),
+	\+ unit_has_status(dead, Target),
+	unit_id(Target, TargetID).
+enemy_target(State, Target, [move(Pos), attack(TargetID)]) :-
 	current_unit(State, Unit),
 	can_move(State, Unit, Pos),
 	can_attack_from(Pos, Unit, At),
@@ -87,12 +89,27 @@ enemy_target(State, Target) :-
 	\+ can_attack(Unit, Target),
 	dif(Friend, Foe),
 	unit_team(Unit, Friend),
-	unit_team(Target, Foe).
+	unit_team(Target, Foe),
+	\+ unit_has_status(dead, Target),
+	unit_id(Target, TargetID).
+
+ai_actions(State, Actions) :-
+	once(ai_action(State, Actions)).
+
+ai_action(State, Actions) :-
+	match_controller(State, ai),
+	(  enemy_target(State, _, Actions0)
+	-> true
+	;  Actions0 = []
+	),
+	append(Actions0, [end_turn, next_turn], Actions).
+ai_action(_, []).
 
 possible_actions(State, Actions) :-
 	findall(Action, can_do(Action, State), Actions).
 
 should_pass(State) :-
+	match_controller(State, player), % TODO: hmm
 	possible_actions(State, [end_turn]).
 
 menu(State, Actions) :- possible_actions(State, Actions).
@@ -158,6 +175,10 @@ match_status_(State, input(Team)) :-
 	unit_team(Unit, Team).
 match_status_(_, draw).
 
+match_controller(State, player) :- match_status(State, input(Team)), \+ ai_team(Team).
+match_controller(State, ai) :- match_status(State, input(Team)), ai_team(Team).
+match_controller(State, none) :- \+ match_status(State, input(_)).
+
 test :-
 	begin(42, State, _),
 	run([move(4/5), end_turn,
@@ -165,6 +186,31 @@ test :-
 		next_turn, attack(1), move(3/4), end_turn,
 		next_turn, move(2/2), end_turn,
 		next_turn], State, _, Cues),
+	write(Cues),
+	!.
+
+test_crash :-
+	posix_time(T),
+	begin(T, State, _),
+	run([
+		next_turn,
+		move(2/5),
+		end_turn,
+		next_turn,
+		move(1/5),
+		attack(3),
+		end_turn,
+		next_turn,
+		move(6/2),
+		end_turn,
+		next_turn,
+		attack(2),
+		move(3/7),
+		end_turn,
+		next_turn,
+		end_turn,
+		next_turn
+	], State, _, Cues),
 	write(Cues),
 	!.
 
@@ -195,8 +241,8 @@ dump_state(State) :-
 	maplist(dump_unit, State),
 	current_turn(State, Who),
 	format("Turn: ~w~n", [Who]),
-	(  enemy_target(State, Target)
-	-> format("Potential target: ~w~n", [Target])
+	(  enemy_target(State, Target, TargetActions)
+	-> format("Potential target: ~w~n", [(Target=TargetActions)])
 	;  format("No targets? :(~n", [])
 	).
 

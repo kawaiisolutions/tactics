@@ -1,401 +1,119 @@
 <!doctype html>
 <html>
-<!-- This is just a rough demo client. -->
-<head>
-	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<title>Tactics: Prolog!</title>
-	<style>
-		html {
-			box-sizing: border-box;
-		}
-		header {
-			border-bottom: 1px solid gray;
-		}
-		body {
-			background: white;
-		}
-		#log {
-			max-width: 98vw;
-			white-space: pre-wrap;
-			word-break: break-word;
-			overflow-y: scroll;
-			max-height: 46vh;
-		}
-		#map {
-			font-family: monospace;
-			font-size: large;
-			table-layout: fixed;
-			width: min(50vw, 16ch);
-		}
-		#map td {
-			width: 1.5ch;
-			height: 1.5ch;
-			text-align: center;
-		}
+	<!-- This is just a rough demo client. -->
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Tactics: Prolog!</title>
+		<link rel="stylesheet" href="index.css" />
+	</head>
+	<body>
+		<header>
+			turn: <span id="turn-count">0</span> (<span id="match-status"
+				>loading...</span
+			>)
+		</header>
+		<main id="game" data-view="">
+			<table id="map">
+				<tr>
+					<td class="tile" id="map-1/1" data-x="1" data-y="1">.</td>
+					<td class="tile" id="map-2/1" data-x="2" data-y="1">.</td>
+					<td class="tile" id="map-3/1" data-x="3" data-y="1">.</td>
+					<td class="tile" id="map-4/1" data-x="4" data-y="1">.</td>
+					<td class="tile" id="map-5/1" data-x="5" data-y="1">.</td>
+					<td class="tile" id="map-6/1" data-x="6" data-y="1">.</td>
+					<td class="tile" id="map-7/1" data-x="7" data-y="1">.</td>
+					<td class="tile" id="map-8/1" data-x="8" data-y="1">.</td>
+				</tr>
+				<tr>
+					<td class="tile" id="map-1/2" data-x="1" data-y="2">.</td>
+					<td class="tile" id="map-2/2" data-x="2" data-y="2">.</td>
+					<td class="tile" id="map-3/2" data-x="3" data-y="2">.</td>
+					<td class="tile" id="map-4/2" data-x="4" data-y="2">.</td>
+					<td class="tile" id="map-5/2" data-x="5" data-y="2">.</td>
+					<td class="tile" id="map-6/2" data-x="6" data-y="2">.</td>
+					<td class="tile" id="map-7/2" data-x="7" data-y="2">.</td>
+					<td class="tile" id="map-8/2" data-x="8" data-y="2">.</td>
+				</tr>
+				<tr>
+					<td class="tile" id="map-1/3" data-x="1" data-y="3">.</td>
+					<td class="tile" id="map-2/3" data-x="2" data-y="3">.</td>
+					<td class="tile" id="map-3/3" data-x="3" data-y="3">.</td>
+					<td class="tile" id="map-4/3" data-x="4" data-y="3">.</td>
+					<td class="tile" id="map-5/3" data-x="5" data-y="3">.</td>
+					<td class="tile" id="map-6/3" data-x="6" data-y="3">.</td>
+					<td class="tile" id="map-7/3" data-x="7" data-y="3">.</td>
+					<td class="tile" id="map-8/3" data-x="8" data-y="3">.</td>
+				</tr>
+				<tr>
+					<td class="tile" id="map-1/4" data-x="1" data-y="4">.</td>
+					<td class="tile" id="map-2/4" data-x="2" data-y="4">.</td>
+					<td class="tile" id="map-3/4" data-x="3" data-y="4">.</td>
+					<td class="tile" id="map-4/4" data-x="4" data-y="4">.</td>
+					<td class="tile" id="map-5/4" data-x="5" data-y="4">.</td>
+					<td class="tile" id="map-6/4" data-x="6" data-y="4">.</td>
+					<td class="tile" id="map-7/4" data-x="7" data-y="4">.</td>
+					<td class="tile" id="map-8/4" data-x="8" data-y="4">.</td>
+				</tr>
+				<tr>
+					<td class="tile" id="map-1/5" data-x="1" data-y="5">.</td>
+					<td class="tile" id="map-2/5" data-x="2" data-y="5">.</td>
+					<td class="tile" id="map-3/5" data-x="3" data-y="5">.</td>
+					<td class="tile" id="map-4/5" data-x="4" data-y="5">.</td>
+					<td class="tile" id="map-5/5" data-x="5" data-y="5">.</td>
+					<td class="tile" id="map-6/5" data-x="6" data-y="5">.</td>
+					<td class="tile" id="map-7/5" data-x="7" data-y="5">.</td>
+					<td class="tile" id="map-8/5" data-x="8" data-y="5">.</td>
+				</tr>
+				<tr>
+					<td class="tile" id="map-1/6" data-x="1" data-y="6">.</td>
+					<td class="tile" id="map-2/6" data-x="2" data-y="6">.</td>
+					<td class="tile" id="map-3/6" data-x="3" data-y="6">.</td>
+					<td class="tile" id="map-4/6" data-x="4" data-y="6">.</td>
+					<td class="tile" id="map-5/6" data-x="5" data-y="6">.</td>
+					<td class="tile" id="map-6/6" data-x="6" data-y="6">.</td>
+					<td class="tile" id="map-7/6" data-x="7" data-y="6">.</td>
+					<td class="tile" id="map-8/6" data-x="8" data-y="6">.</td>
+				</tr>
+				<tr>
+					<td class="tile" id="map-1/7" data-x="1" data-y="7">.</td>
+					<td class="tile" id="map-2/7" data-x="2" data-y="7">.</td>
+					<td class="tile" id="map-3/7" data-x="3" data-y="7">.</td>
+					<td class="tile" id="map-4/7" data-x="4" data-y="7">.</td>
+					<td class="tile" id="map-5/7" data-x="5" data-y="7">.</td>
+					<td class="tile" id="map-6/7" data-x="6" data-y="7">.</td>
+					<td class="tile" id="map-7/7" data-x="7" data-y="7">.</td>
+					<td class="tile" id="map-8/7" data-x="8" data-y="7">.</td>
+				</tr>
+				<tr>
+					<td class="tile" id="map-1/8" data-x="1" data-y="8">.</td>
+					<td class="tile" id="map-2/8" data-x="2" data-y="8">.</td>
+					<td class="tile" id="map-3/8" data-x="3" data-y="8">.</td>
+					<td class="tile" id="map-4/8" data-x="4" data-y="8">.</td>
+					<td class="tile" id="map-5/8" data-x="5" data-y="8">.</td>
+					<td class="tile" id="map-6/8" data-x="6" data-y="8">.</td>
+					<td class="tile" id="map-7/8" data-x="7" data-y="8">.</td>
+					<td class="tile" id="map-8/8" data-x="8" data-y="8">.</td>
+				</tr>
+			</table>
+			<ol id="units"></ol>
+		</main>
 
-		#game[data-view=move] .tile.can-move {
-			background-color: rgba(0, 0, 250, 0.2);
-		}
-		#game[data-view=attack] .tile.can-attack {
-			background-color: rgba(250, 0, 0, 0.2);
-		}
-		#game .tile.focus {
-			background-color: rgba(0, 250, 0, 0.2);
-		}
+		<div id="menu" data-status="loading" data-can="">
+			<p class="gameplay">
+				<button id="move-btn"><u>m</u>ove</button>
+			</p>
+			<p class="gameplay">
+				<button id="attack-btn"><u>a</u>ttack</button>
+			</p>
+			<p class="gameplay">
+				<button id="end-turn-btn">end <u>t</u>urn</button>
+			</p>
+			<p class="meta">
+				<button id="reset-btn">reset</button>
+			</p>
+		</div>
 
-		#game .tile.unit.team-red {
-			color: red;
-		}
-		#game .tile.unit.team-blue {
-			color: blue;
-		}
-		#game .tile.unit.team-purple {
-			color: rebeccapurple;
-		}
-
-		#game .tile:hover {
-			border: 2px dashed gainsboro;
-			cursor: default;
-		}
-		#game .tile:hover:is(.can-move, .can-attack) {
-			cursor: pointer;
-		}
-		#game .tile.can-move:hover {
-			border: 2px dashed blue;
-		}
-		#game .tile.can-attack.unit:hover {
-			border: 2px dashed red;
-		}
-		#game .tile:not(:hover) {
-			border: 2px solid transparent;
-		}
-	
-		/*
-		#game .tile:not(.unit).can-move {
-			color: black;
-		}
-		#game .tile:not(.unit):not(.can-move) {
-			color: rgb(128, 128, 128);
-		}
-		*/
-
-		.tile {
-			cursor: pointer;
-		}
-		#game {
-			display: flex;
-		}
-		#menu {
-			padding: 1em;
-		}
-		#menu button {
-			width: 15ch;
-		}
-
-		#menu[data-status=win] .meta {
-			display: initial;
-		}
-		#menu:not([data-status=win]) .meta {
-			display: none;
-		}
-
-		#menu[data-status=win] .gameplay,
-		#menu:not([data-can~=attack]) #attack-btn,
-		#menu:not([data-can~=move]) #move-btn,
-		#menu:not([data-can~=end_turn]) #end-turn-btn {
-			pointer-events: none;
-			filter: opacity(35%);
-		}
-
-		@media (hover: none) {
-			#menu button u {
-				text-decoration: none;
-			}
-		}
-	</style>
-</head>
-<body>
-<header>
-	turn: <span id="turn-count">0</span> (<span id="match-status">loading...</span>)
-</header>
-<main id="game" data-view="">
-	<table id="map">
-		<tr><td class="tile" id="map-1/1" data-x="1" data-y="1">.</td><td class="tile" id="map-2/1" data-x="2" data-y="1">.</td><td class="tile" id="map-3/1" data-x="3" data-y="1">.</td><td class="tile" id="map-4/1" data-x="4" data-y="1">.</td><td class="tile" id="map-5/1" data-x="5" data-y="1">.</td><td class="tile" id="map-6/1" data-x="6" data-y="1">.</td><td class="tile" id="map-7/1" data-x="7" data-y="1">.</td><td class="tile" id="map-8/1" data-x="8" data-y="1">.</td></tr>
-		<tr><td class="tile" id="map-1/2" data-x="1" data-y="2">.</td><td class="tile" id="map-2/2" data-x="2" data-y="2">.</td><td class="tile" id="map-3/2" data-x="3" data-y="2">.</td><td class="tile" id="map-4/2" data-x="4" data-y="2">.</td><td class="tile" id="map-5/2" data-x="5" data-y="2">.</td><td class="tile" id="map-6/2" data-x="6" data-y="2">.</td><td class="tile" id="map-7/2" data-x="7" data-y="2">.</td><td class="tile" id="map-8/2" data-x="8" data-y="2">.</td></tr>
-		<tr><td class="tile" id="map-1/3" data-x="1" data-y="3">.</td><td class="tile" id="map-2/3" data-x="2" data-y="3">.</td><td class="tile" id="map-3/3" data-x="3" data-y="3">.</td><td class="tile" id="map-4/3" data-x="4" data-y="3">.</td><td class="tile" id="map-5/3" data-x="5" data-y="3">.</td><td class="tile" id="map-6/3" data-x="6" data-y="3">.</td><td class="tile" id="map-7/3" data-x="7" data-y="3">.</td><td class="tile" id="map-8/3" data-x="8" data-y="3">.</td></tr>
-		<tr><td class="tile" id="map-1/4" data-x="1" data-y="4">.</td><td class="tile" id="map-2/4" data-x="2" data-y="4">.</td><td class="tile" id="map-3/4" data-x="3" data-y="4">.</td><td class="tile" id="map-4/4" data-x="4" data-y="4">.</td><td class="tile" id="map-5/4" data-x="5" data-y="4">.</td><td class="tile" id="map-6/4" data-x="6" data-y="4">.</td><td class="tile" id="map-7/4" data-x="7" data-y="4">.</td><td class="tile" id="map-8/4" data-x="8" data-y="4">.</td></tr>
-		<tr><td class="tile" id="map-1/5" data-x="1" data-y="5">.</td><td class="tile" id="map-2/5" data-x="2" data-y="5">.</td><td class="tile" id="map-3/5" data-x="3" data-y="5">.</td><td class="tile" id="map-4/5" data-x="4" data-y="5">.</td><td class="tile" id="map-5/5" data-x="5" data-y="5">.</td><td class="tile" id="map-6/5" data-x="6" data-y="5">.</td><td class="tile" id="map-7/5" data-x="7" data-y="5">.</td><td class="tile" id="map-8/5" data-x="8" data-y="5">.</td></tr>
-		<tr><td class="tile" id="map-1/6" data-x="1" data-y="6">.</td><td class="tile" id="map-2/6" data-x="2" data-y="6">.</td><td class="tile" id="map-3/6" data-x="3" data-y="6">.</td><td class="tile" id="map-4/6" data-x="4" data-y="6">.</td><td class="tile" id="map-5/6" data-x="5" data-y="6">.</td><td class="tile" id="map-6/6" data-x="6" data-y="6">.</td><td class="tile" id="map-7/6" data-x="7" data-y="6">.</td><td class="tile" id="map-8/6" data-x="8" data-y="6">.</td></tr>
-		<tr><td class="tile" id="map-1/7" data-x="1" data-y="7">.</td><td class="tile" id="map-2/7" data-x="2" data-y="7">.</td><td class="tile" id="map-3/7" data-x="3" data-y="7">.</td><td class="tile" id="map-4/7" data-x="4" data-y="7">.</td><td class="tile" id="map-5/7" data-x="5" data-y="7">.</td><td class="tile" id="map-6/7" data-x="6" data-y="7">.</td><td class="tile" id="map-7/7" data-x="7" data-y="7">.</td><td class="tile" id="map-8/7" data-x="8" data-y="7">.</td></tr>
-		<tr><td class="tile" id="map-1/8" data-x="1" data-y="8">.</td><td class="tile" id="map-2/8" data-x="2" data-y="8">.</td><td class="tile" id="map-3/8" data-x="3" data-y="8">.</td><td class="tile" id="map-4/8" data-x="4" data-y="8">.</td><td class="tile" id="map-5/8" data-x="5" data-y="8">.</td><td class="tile" id="map-6/8" data-x="6" data-y="8">.</td><td class="tile" id="map-7/8" data-x="7" data-y="8">.</td><td class="tile" id="map-8/8" data-x="8" data-y="8">.</td></tr>
-	</table>
-	<ol id="units"></ol>
-</main>
-
-<div id="menu" data-status="loading" data-can="">
-	<p class="gameplay">
-		<button id="move-btn"><u>m</u>ove</button>
-	</p>
-	<p class="gameplay">
-		<button id="attack-btn"><u>a</u>ttack</button>
-	</p>
-	<p class="gameplay">
-		<button id="end-turn-btn">end <u>t</u>urn</button>
-	</p>
-	<p class="meta">
-		<button id="reset-btn">reset</button>
-	</p>
-</div>
-
-<pre id="log"></pre>
-<script type="module">
-// import { load, Prolog, Atom, Compound } from 'https://esm.sh/trealla@0.18.6?target=es2018';
-import { load, Prolog, Atom, Compound } from 'https://esm.sh/trealla@0.20.8';
-let b4load = Date.now();
-await load();
-
-const FILES = ["tactics", "unit", "world"];
-
-let pl = null;
-let state = null;
-let jstate = null;
-let focus = null;
-let turns = 0;
-let moveRadius = [];
-let attackRadius = [];
-let matchStatus = null;
-let menu = [];
-
-const keybinds = {
-	"m": view.bind(globalThis, "move"),
-	"a": view.bind(globalThis, "attack"),
-	"t": endTurn,
-	"Escape": view.bind(globalThis, null),
-}
-
-function setup() {
-	document.getElementById("end-turn-btn").onclick = endTurn
-
-	document.getElementById("reset-btn").onclick = async function() {
-		await init();
-	}
-	document.getElementById("move-btn").onclick = view.bind(globalThis, "move");
-	document.getElementById("attack-btn").onclick = view.bind(globalThis, "attack");
-
-	document.addEventListener("keyup", (event) => {
-		if (event.isComposing || event.keyCode === 229) {
-			return;
-		}
-		const bind = keybinds[event.key];
-		if (!bind) return;
-		bind();
-	});
-}
-
-async function endTurn() {
-	await apply(new Atom("end_turn"));
-	await apply(new Atom("next_turn"));
-	delete document.getElementById("game").dataset.view;
-}
-
-function view(what) {
-	console.log("view", what);
-	const game = document.getElementById("game");
-	if (what) {
-		game.dataset.view = what;
-	} else {
-		delete game.dataset.view;
-	}
-}
-
-async function init() {
-	pl = new Prolog();
-	state = null;
-	focus = null;
-	turns = 0;
-	moveRadius = [];
-	attackRadius = [];
-	matchStatus = null;
-	menu = [];
-
-	await Promise.all(FILES.map(x => download(x)));
-	const load = await pl.queryOnce(`consult(tactics).`);
-	if (load.status !== "success") {
-		alert("failed to load: " + load.error);
-		return;
-	}
-	console.log(load);
-
-	const r = await pl.queryOnce(`
-		begin(Seed, State, Cues),
-		current_unit(State, Unit),
-		move_radius(State, Unit, MoveRadius),
-		attack_radius(Unit, AttackRadius),
-		menu(State, Menu),
-		match_status(State, MatchStatus),
-		state_json_chars(State, StateJSON).`,
-		{bind: {Seed: Date.now()}});
-	console.log(r);
-	handle(r);
-	console.log("loaded", Date.now() - b4load);
-}
-
-async function download(name) {
-	const filename = `/${name}.pl`
-	const script = await (await fetch("." + filename)).text();
-	pl.fs.open(filename, { write: true, create: true }).writeString(script);
-}
-
-async function apply(goal) {
-	console.time("apply");
-	const result = await pl.queryOnce(`
-		do(Goal, State0, State, Cues),
-		current_unit(State, Unit),
-		move_radius(State, Unit, MoveRadius),
-		attack_radius(Unit, AttackRadius),
-		menu(State, Menu),
-		match_status(State, MatchStatus),
-		state_json_chars(State, StateJSON).`,
-		{bind: {Goal: goal, State0: state}});
-	console.timeEnd("apply");
-	console.log(result);
-	if (result.status === "failure") {
-		log(`You can't do that.`);
-		return;
-	}
-	log(result.stdout);
-	if (result.status !== "success") {
-		throw new Error(`${result.status} ${result.error}`);
-	}
-	handle(result);
-}
-
-function handle(result) {
-	if (result.stderr) {
-		console.log(result.stderr);
-	}
-	if (result.status == "error" || result.status == "failure") {
-		log(`You can't do that. ${result.error}`);
-		return;
-	}
-
-	state = result.answer.State;
-	console.log(jstate);
-	if (result.answer.StateJSON)
-		jstate = JSON.parse(result.answer.StateJSON);
-	if (result.answer.AttackRadius)
-		attackRadius = result.answer.AttackRadius.map(x => `${x.args[0]}/${x.args[1]}`);
-	if (result.answer.MoveRadius)
-		moveRadius = result.answer.MoveRadius.map(x => `${x.args[0]}/${x.args[1]}`);
-	if (result.answer.MatchStatus)
-		matchStatus = result.answer.MatchStatus;
-	if (result.answer.Menu)
-		menu = result.answer.Menu.map(x => x.functor);
-
-	const cues = result.answer.Cues;
-	for (const cue of cues) {
-		switch (cue.functor) {
-		case "tick":
-			turns++;
-			break;
-		case "focus_unit":
-			focus = cue.args[0];
-			break;
-		}
-		console.log("cue", cue);
-	}
-	render();
-}
-
-function render() {
-	document.getElementById("turn-count").textContent = turns;
-	document.getElementById("menu").dataset.can = menu.join(" ");
-
-	if (matchStatus) {
-		const ms = document.getElementById("match-status");
-		document.getElementById("menu").dataset.status = matchStatus.functor;
-		switch (matchStatus.functor) {
-		case "input":
-			ms.textContent = `${matchStatus.args[0].functor}'s turn`;
-			break;
-		case "win":
-			ms.textContent = `${matchStatus.args[0].functor} wins!`;
-			break;
-		}
-	}
-	
-
-
-	for (const tile of Array.from(document.querySelectorAll(".tile"))) {
-		const x = Number(tile.dataset.x);
-		const y = Number(tile.dataset.y);
-		const goal = new Compound("move", [new Compound("/", [x, y])]);
-		tile.onclick = apply.bind(tile, goal);
-	}
-
-	for (let y = 1; y <= 8; y++) {
-		for (let x = 1; x <= 8; x++) {
-			const pos = `${x}/${y}`;
-			const id = `map-${pos}`;
-			const elem = document.getElementById(id);
-			elem.textContent = ".";
-			elem.classList.toggle("can-attack", attackRadius.includes(pos))
-			elem.classList.toggle("can-move", moveRadius.includes(pos))
-		}
-	}
-
-	Array.from(document.querySelectorAll(".focus")).forEach(x => x.classList.remove("focus"));
-	Array.from(document.querySelectorAll(".unit")).forEach(x => x.classList.remove("unit"));
-
-	const frag = new DocumentFragment();
-	for (const ct_unit of jstate) {
-		const {
-			ct, unit, type,
-			id,	team, pos,
-			hp,	maxhp,
-			mp,	maxmp,
-			speed,
-			equipment,
-			status,
-		} = ct_unit;
-		const eid = `map-${pos.x}/${pos.y}`;
-		const elem = document.getElementById(eid);
-		if (!elem) {
-			continue;
-		}
-		let glyph = "@";
-		if (hp === 0) {
-			glyph = "%";
-		}
-		elem.textContent = glyph;
-		elem.classList.add(`team-${team}`);
-		elem.classList.add("unit");
-		if (id == focus) {
-			elem.classList.add("focus");
-		}
-		const attack = new Compound("attack", [id]);
-		elem.onclick = apply.bind(elem, attack);
-
-		const li = document.createElement("li");
-		li.textContent = `${team} ${type} (HP: ${hp}/${maxhp}, MP: ${mp}/${maxmp}) [CT: ${ct}]`;
-		li.style.textDecoration = "underline";
-		li.style.textDecorationColor = team;
-		frag.appendChild(li);
-	}
-	const units = document.getElementById("units");
-	units.textContent = "";
-	units.append(frag);
-}
-
-function log(msg) {
-	if (msg == "") return;
-	const elem = document.getElementById("log");
-	// elem.innerText = `${msg.trim()}\n\n\u2042\n\n${elem.innerText}`;
-	elem.innerText = msg;
-}
-
-setup();
-await init();
-</script>
-</body>
+		<pre id="log"></pre>
+		<script type="module" src="index.js"></script>
+	</body>
 </html>

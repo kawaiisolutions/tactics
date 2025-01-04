@@ -1,0 +1,125 @@
+html {
+	box-sizing: border-box;
+}
+header {
+	border-bottom: 1px solid gray;
+}
+body {
+	background: white;
+}
+#log {
+	max-width: 98vw;
+	white-space: pre-wrap;
+	word-break: break-word;
+	overflow-y: scroll;
+	max-height: 46vh;
+}
+#map {
+	font-family: monospace;
+	font-size: large;
+	table-layout: fixed;
+	width: min(50vw, 16ch);
+}
+#map td {
+	width: 1.5ch;
+	height: 1.5ch;
+	text-align: center;
+}
+
+#game[data-view="move"] .tile.can-move {
+	background-color: rgba(0, 0, 250, 0.2);
+}
+#game[data-view="attack"] .tile.can-attack {
+	background-color: rgba(250, 0, 0, 0.2);
+}
+#game .tile.focus {
+	background-color: rgba(0, 250, 0, 0.2);
+}
+
+#game .tile.unit.team-red {
+	color: red;
+}
+#game .tile.unit.team-blue {
+	color: blue;
+}
+#game .tile.unit.team-purple {
+	color: rebeccapurple;
+}
+
+#game .tile:hover {
+	border: 2px dashed gainsboro;
+	cursor: default;
+}
+#game .tile:hover:is(.can-move, .can-attack) {
+	cursor: pointer;
+}
+#game .tile.can-move:hover {
+	border: 2px dashed blue;
+}
+#game .tile.can-attack.unit:hover {
+	border: 2px dashed red;
+}
+#game .tile:not(:hover) {
+	border: 2px solid transparent;
+}
+
+#game:has(.tile.unit[data-unit="1"]:hover) #units li[data-unit="1"],
+#game:has(.tile.unit[data-unit="2"]:hover) #units li[data-unit="2"],
+#game:has(.tile.unit[data-unit="3"]:hover) #units li[data-unit="3"],
+#game:has(.tile.unit[data-unit="4"]:hover) #units li[data-unit="4"],
+#game:has(.tile.unit[data-unit="5"]:hover) #units li[data-unit="5"],
+#game:has(.tile.unit[data-unit="6"]:hover) #units li[data-unit="6"],
+#game:has(.tile.unit[data-unit="7"]:hover) #units li[data-unit="7"],
+#game:has(.tile.unit[data-unit="8"]:hover) #units li[data-unit="8"],
+#game:has(.tile.unit[data-unit="9"]:hover) #units li[data-unit="9"],
+#game:has(.tile.unit[data-unit="10"]:hover) #units li[data-unit="10"],
+#game:has(.tile.unit[data-unit="11"]:hover) #units li[data-unit="11"],
+#game:has(.tile.unit[data-unit="12"]:hover) #units li[data-unit="12"],
+#game:has(.tile.unit[data-unit="13"]:hover) #units li[data-unit="13"],
+#game:has(.tile.unit[data-unit="14"]:hover) #units li[data-unit="14"],
+#game:has(.tile.unit[data-unit="15"]:hover) #units li[data-unit="15"] {
+	font-weight: bold;
+}
+
+/*
+#game .tile:not(.unit).can-move {
+	color: black;
+}
+#game .tile:not(.unit):not(.can-move) {
+	color: rgb(128, 128, 128);
+}
+*/
+
+.tile {
+	cursor: pointer;
+}
+#game {
+	display: flex;
+}
+#menu {
+	padding: 1em;
+}
+#menu button {
+	width: 15ch;
+}
+
+#menu[data-status="win"] .meta {
+	display: initial;
+}
+#menu:not([data-status="win"]) .meta {
+	display: none;
+}
+
+#menu[data-status="win"] .gameplay,
+#menu:not([data-can~="attack"]) #attack-btn,
+#menu:not([data-can~="move"]) #move-btn,
+#menu:not([data-can~="end_turn"]) #end-turn-btn {
+	pointer-events: none;
+	filter: opacity(35%);
+}
+
+@media (hover: none) {
+	#menu button u {
+		text-decoration: none;
+	}
+}

@@ -2,7 +2,7 @@
 	unit_mana/2, unit_mp/2, unit_maxmp/2, unit_speed/2, unit_status/2,
 	unit_json/2,
 	unit_with_pos/3, unit_with_hp/3, unit_with_mp/3, unit_with_status/3,
-	unit_equipment/2, unit_weapon/2, unit_has_status/3,
+	unit_equipment/2, unit_weapon/2, unit_has_status/2,
 	move_range/2, attack_range/2, tick_unit/2]).
 
 :- use_module(library(lists)).
