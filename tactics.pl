@@ -93,12 +93,42 @@ enemy_target(State, Target, [move(Pos), attack(TargetID)]) :-
 	\+ unit_has_status(dead, Target),
 	unit_id(Target, TargetID).
 
+% closest target for attacking
+closest_target(State, Target, Actions) :-
+	current_unit(State, Unit),
+	unit_pos(Unit, Origin),
+	findall(Dist-t(Target, As), (
+		enemy_target(State, Target, As),
+		unit_pos(Target, Dest),
+		distance(Origin, Dest, Dist)
+	), Targets0),
+	keysort(Targets0, [_-t(Target, Actions)|_]).
+
+% closest target for moving
+closest_target(State, Target, Actions) :-
+	current_unit(State, Unit),
+	unit_pos(Unit, Origin),
+	unit_team(Unit, Team),
+	dif(Team, Foe),
+	findall(Dist-t(Target, As), (
+		unit_team(Target, Foe),
+		member(_-Target, State),
+		unit_pos(Target, Dest),
+		\+ unit_has_status(dead, Target),
+		line_of_sight(State, Unit, Dest, Path0),
+		include(can_move(State, Unit), Path0, Path),
+		distance(Origin, Dest, Dist),
+		last(Path, To),
+		As = [move(To)]
+	), Targets0),
+	keysort(Targets0, [_-t(Target, Actions)|_]).
+
 ai_actions(State, Actions) :-
 	once(ai_action(State, Actions)).
 
 ai_action(State, Actions) :-
 	match_controller(State, ai),
-	(  enemy_target(State, _, Actions0)
+	(  closest_target(State, _, Actions0)
 	-> true
 	;  Actions0 = []
 	),

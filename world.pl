@@ -1,4 +1,4 @@
-:- module(world, [pos/1, pos_adjacent/2, path/4, unit_can_bypass/2, can_move/3, move_radius/3,
+:- module(world, [pos/1, pos_adjacent/2, path/4, line_of_sight/4, unit_can_bypass/2, can_move/3, move_radius/3,
 	unit_at/3, distance/3, can_attack/2, can_attack_from/3, attack_radius/2, aoe/3, aoe_area/3]).
 
 :- use_module(library(lists)).
@@ -38,6 +38,31 @@ path_(State, Unit, Origin, Dest, [Pos|Rest]) :-
 	;  true
 	),
 	path_(State, Unit, Pos, Dest, Rest).
+
+line_of_sight(State, Unit, Dest, Path) :-
+%   \+unit_at(State, Dest, _),
+	unit_pos(Unit, Origin),
+%	move_range(Unit, Range),
+	Range = 12, % TODO: map width
+	pos(Dest),
+	distance(Origin, Dest, Dist),
+	Dist =< Range,
+	between(Dist, Range, Length),
+	length(Path, Length),
+	line_of_sight_(State, Unit, Origin, Dest, Path),
+	!.
+line_of_sight_(_, _, Origin, Origin, []).
+line_of_sight_(State, _, Origin, Dest, [Dest]) :-
+	% \+unit_at(State, Dest, _),
+	pos_adjacent(Origin, Dest).
+line_of_sight_(State, Unit, Origin, Dest, [Pos|Rest]) :-
+	\+pos_adjacent(Origin, Dest),
+	pos_adjacent(Origin, Pos),
+	% (  unit_at(State, Pos, Blocker)
+	% -> once(unit_can_bypass(Unit, Blocker))
+	% ;  true
+	% ),
+	line_of_sight_(State, Unit, Pos, Dest, Rest).
 
 unit_can_bypass(Unit, Other) :-
 	unit_team(Unit, Team),

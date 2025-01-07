@@ -4,7 +4,7 @@ import {
 	Atom,
 	Compound,
 	fromJSON
-} from "https://esm.sh/trealla@0.21.13?keep-names";
+} from "https://esm.sh/trealla@0.21.15?keep-names";
 
 let b4load = Date.now();
 await load();
